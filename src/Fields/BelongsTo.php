@@ -18,30 +18,31 @@ class BelongsTo extends EagerField implements Sortable
 
     public function fillAttribute(RestifyRequest $request, $model, int $bulkRow = null)
     {
-        /** * @var Model $relatedModel */
-        $relatedModel = $model->{$this->relation}()->getModel();
+        $relationKey = $request->input($this->attribute);
+        if ($relationKey) {
+            /** * @var Model $relatedModel */
+            $relatedModel = $model->{$this->relation}()->getModel();
 
-        $belongsToModel = $relatedModel->newQuery()->whereKey(
-            $request->input($this->attribute)
-        )->firstOrFail();
+            $belongsToModel = $relatedModel->newQuery()->whereKey($relationKey)->firstOrFail();
 
-        $methodGuesser = 'attach'.Str::studly(class_basename($relatedModel));
+            $methodGuesser = 'attach' . Str::studly(class_basename($relatedModel));
 
-        $this->repository->authorizeToAttach(
-            $request,
-            $methodGuesser,
-            $belongsToModel,
-        );
+            $this->repository->authorizeToAttach(
+                $request,
+                $methodGuesser,
+                $belongsToModel,
+            );
 
-        if (is_callable($this->canAttachCallback)) {
-            if (! call_user_func($this->canAttachCallback, $request, $this->repository, $belongsToModel)) {
-                abort(403, 'Unauthorized to attach.');
+            if (is_callable($this->canAttachCallback)) {
+                if (!call_user_func($this->canAttachCallback, $request, $this->repository, $belongsToModel)) {
+                    abort(403, 'Unauthorized to attach.');
+                }
             }
-        }
 
-        $model->{$this->relation}()->associate(
-            $belongsToModel
-        );
+            $model->{$this->relation}()->associate(
+                $belongsToModel
+            );
+        }
     }
 
     public function searchable(...$attributes): self
